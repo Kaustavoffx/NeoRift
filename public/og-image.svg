@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="HARDCODED STACKS social preview">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070a11"/>
+      <stop offset="55%" stop-color="#111a34"/>
+      <stop offset="100%" stop-color="#05070d"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="35%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#7cf7d1" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#6483ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="370" cy="320" r="260" fill="url(#orb)"/>
+  <circle cx="860" cy="250" r="190" fill="#ff7ca8" opacity="0.12"/>
+  <circle cx="890" cy="390" r="130" fill="#7cf7d1" opacity="0.08"/>
+  <text x="88" y="176" fill="#eef2ff" font-size="74" font-family="Bahnschrift, Trebuchet MS, sans-serif" letter-spacing="10">HARDCODED STACKS</text>
+  <text x="90" y="236" fill="#a9bdf4" font-size="28" font-family="Bahnschrift, Trebuchet MS, sans-serif" letter-spacing="6">CINEMATIC INDIE-TECH GAME SHELL</text>
+  <text x="90" y="310" fill="#dbe5ff" font-size="30" font-family="Bahnschrift, Trebuchet MS, sans-serif">Optimized for Vercel, low-end devices, and premium motion.</text>
+</svg>

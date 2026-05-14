@@ -19,6 +19,16 @@ interface PerformanceMetrics {
   ttfb?: number // Time to First Byte
 }
 
+interface GTagFunction {
+  (command: string, action: string, config: Record<string, unknown>): void
+}
+
+interface WindowWithGtag extends Window {
+  dataLayer?: unknown[]
+  gtag?: GTagFunction
+  __HARDCODED_STACKS__?: { analytics?: Analytics }
+}
+
 class Analytics {
   private enabled: boolean
   private gaId: string | null
@@ -38,7 +48,7 @@ class Analytics {
     this.captureWebVitals()
   }
 
-  private initializeGoogleAnalytics() {
+  private initializeGoogleAnalytics(): void {
     if (!this.gaId) return
 
     const script = document.createElement('script')
@@ -46,16 +56,17 @@ class Analytics {
     script.src = `https://www.googletagmanager.com/gtag/js?id=${this.gaId}`
     document.head.appendChild(script)
 
-    const dataLayer = ((window as any).dataLayer || []) as Array<Record<string, unknown>>
-    ;(window as any).dataLayer = dataLayer
+    const windowData = window as WindowWithGtag
+    const dataLayer: unknown[] = windowData.dataLayer || []
+    windowData.dataLayer = dataLayer
 
-    const gtag = function (...args: unknown[]) {
-      dataLayer.push(...(args as Array<Record<string, unknown>>))
+    const gtag: GTagFunction = (command: string, action: string, config: Record<string, unknown>) => {
+      dataLayer.push({ command, action, ...config })
     }
 
-    ;(window as any).gtag = gtag
-    ;(window as any).gtag('js', new Date())
-    ;(window as any).gtag('config', this.gaId, {
+    windowData.gtag = gtag
+    gtag('js', '', { timestamp: new Date().toISOString() })
+    gtag('config', this.gaId || '', {
       page_path: window.location.pathname,
       page_title: document.title,
     })
@@ -64,7 +75,7 @@ class Analytics {
   /**
    * Track custom event
    */
-  trackEvent(category: string, action: string, label?: string, value?: number) {
+  trackEvent(category: string, action: string, label?: string, value?: number): void {
     if (!this.enabled) return
 
     const event: AnalyticsEvent = {
@@ -78,8 +89,9 @@ class Analytics {
     this.events.push(event)
 
     // Send to Google Analytics if available
-    if ((window as any).gtag) {
-      ;(window as any).gtag('event', action, {
+    const windowData = window as WindowWithGtag
+    if (windowData.gtag) {
+      windowData.gtag('event', action, {
         event_category: category,
         event_label: label,
         value: value,
@@ -92,11 +104,12 @@ class Analytics {
   /**
    * Track page view
    */
-  trackPageView(title: string, path: string) {
+  trackPageView(title: string, path: string): void {
     this.trackEvent('navigation', 'pageview', path)
 
-    if ((window as any).gtag) {
-      ;(window as any).gtag('config', this.gaId, {
+    const windowData = window as WindowWithGtag
+    if (windowData.gtag) {
+      windowData.gtag('config', this.gaId || '', {
         page_path: path,
         page_title: title,
       })
@@ -106,12 +119,12 @@ class Analytics {
   /**
    * Track user interaction
    */
-  trackInteraction(target: string, action: string, metadata?: Record<string, unknown>) {
+  trackInteraction(target: string, action: string, metadata?: Record<string, unknown>): void {
     this.trackEvent('interaction', action, target)
 
-    const gtag = (window as any).gtag as Function | undefined
-    if (metadata && gtag) {
-      gtag('event', 'interaction', {
+    const windowData = window as WindowWithGtag
+    if (metadata && windowData.gtag) {
+      windowData.gtag('event', 'interaction', {
         interaction_target: target,
         interaction_action: action,
         ...metadata,
@@ -122,12 +135,12 @@ class Analytics {
   /**
    * Track error event
    */
-  trackError(error: Error, info?: React.ErrorInfo | Record<string, unknown>) {
+  trackError(error: Error, info?: React.ErrorInfo | Record<string, unknown>): void {
     this.trackEvent('error', 'exception', error.message)
 
-    const gtag = (window as any).gtag as Function | undefined
-    if (gtag) {
-      gtag('event', 'exception', {
+    const windowData = window as WindowWithGtag
+    if (windowData.gtag) {
+      windowData.gtag('event', 'exception', {
         description: error.message,
         fatal: true,
       })
@@ -139,15 +152,17 @@ class Analytics {
   /**
    * Track performance metrics using Web Vitals API
    */
-  private captureWebVitals() {
+  private captureWebVitals(): void {
     // Capture Core Web Vitals using PerformanceObserver
     if ('PerformanceObserver' in window) {
       try {
         // Measure Cumulative Layout Shift
         const clsObserver = new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            if ((entry as any).hadRecentInput) continue
-            const cls = (entry as any).value
+          const entries = 'getEntries' in list ? list.getEntries() : (list as unknown as { entries: PerformanceEntry[] }).entries
+          for (const entry of entries) {
+            const layoutEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
+            if (layoutEntry.hadRecentInput) continue
+            const cls = layoutEntry.value || 0
             this.trackEvent('performance', 'cls', undefined, cls)
           }
         })
@@ -155,17 +170,19 @@ class Analytics {
 
         // Measure Largest Contentful Paint
         const lcpObserver = new PerformanceObserver((list) => {
-          const entries = list.getEntries()
-          const lastEntry = entries[entries.length - 1]
-          const lcp = (lastEntry as any).renderTime || (lastEntry as any).loadTime
+          const entries = 'getEntries' in list ? list.getEntries() : (list as unknown as { entries: PerformanceEntry[] }).entries
+          const lastEntry = entries[entries.length - 1] as PerformanceEntry & { renderTime?: number; loadTime?: number }
+          const lcp = (lastEntry?.renderTime || lastEntry?.loadTime || 0) as number
           this.trackEvent('performance', 'lcp', undefined, lcp)
         })
         lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
 
         // Measure First Input Delay
         const fidObserver = new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            const fid = (entry as any).processingDuration
+          const entries = 'getEntries' in list ? list.getEntries() : (list as unknown as { entries: PerformanceEntry[] }).entries
+          for (const entry of entries) {
+            const fidEntry = entry as PerformanceEntry & { processingDuration?: number }
+            const fid = fidEntry.processingDuration || 0
             this.trackEvent('performance', 'fid', undefined, fid)
           }
         })
@@ -207,14 +224,15 @@ class Analytics {
   /**
    * Send session data (e.g., on page unload)
    */
-  sendSessionData() {
+  sendSessionData(): void {
     if (!this.enabled) return
 
     const sessionDuration = this.getSessionDuration()
     this.trackEvent('session', 'end', undefined, sessionDuration)
 
-    if ((window as any).gtag) {
-      ;(window as any).gtag('event', 'session_end', {
+    const windowData = window as WindowWithGtag
+    if (windowData.gtag) {
+      windowData.gtag('event', 'session_end', {
         session_duration: sessionDuration,
         event_count: this.events.length,
       })
@@ -228,7 +246,7 @@ let analyticsInstance: Analytics | null = null
 export const getAnalytics = (): Analytics => {
   if (!analyticsInstance) {
     analyticsInstance = new Analytics()
-    
+
     // Track session end on page unload
     window.addEventListener('beforeunload', () => {
       analyticsInstance?.sendSessionData()
@@ -239,16 +257,9 @@ export const getAnalytics = (): Analytics => {
 
 // Make available globally for error boundary
 if (typeof window !== 'undefined') {
-  ;(window as any).__HARDCODED_STACKS__ = (window as any).__HARDCODED_STACKS__ || {}
-  ;(window as any).__HARDCODED_STACKS__.analytics = getAnalytics()
+  const windowData = window as WindowWithGtag
+  windowData.__HARDCODED_STACKS__ = windowData.__HARDCODED_STACKS__ || {}
+  windowData.__HARDCODED_STACKS__.analytics = getAnalytics()
 }
 
 export type { AnalyticsEvent, PerformanceMetrics }
-
-interface WindowWithGtag extends Window {
-  dataLayer?: unknown[]
-  gtag?: (command: string, ...args: unknown[]) => void
-  __HARDCODED_STACKS__?: { analytics?: Analytics }
-}
-
-class Analytics {
