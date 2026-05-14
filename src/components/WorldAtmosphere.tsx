@@ -69,12 +69,26 @@ export default function WorldAtmosphere({ palette, seed }: WorldAtmosphereProps)
     window.addEventListener('resize', resize)
     window.addEventListener('pointermove', onMove)
 
+    const resolveColor = (base: string, hexSuffix?: string) => {
+      if (!hexSuffix) return base
+      if (base.startsWith('#')) return base + hexSuffix
+      const m = base.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+      if (m) {
+        const r = Number(m[1])
+        const g = Number(m[2])
+        const b = Number(m[3])
+        const alpha = Math.max(0, Math.min(1, parseInt(hexSuffix, 16) / 255))
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`
+      }
+      return base
+    }
+
     const drawWash = () => {
       const centerX = state.width * state.pointerX
       const centerY = state.height * state.pointerY
       const wash = context.createRadialGradient(centerX, centerY, 0, state.width / 2, state.height / 2, Math.max(state.width, state.height))
-      wash.addColorStop(0, `${palette.glow}88`)
-      wash.addColorStop(0.35, `${palette.glowAlt}18`)
+      wash.addColorStop(0, resolveColor(palette.glow, '88'))
+      wash.addColorStop(0.35, resolveColor(palette.glowAlt, '18'))
       wash.addColorStop(1, 'rgba(0,0,0,0.08)')
       context.fillStyle = wash
       context.fillRect(0, 0, state.width, state.height)

@@ -113,9 +113,23 @@ export default function MenuAtmosphere({ activeIndex, palette }: MenuAtmosphereP
       const baseY = state.height * state.pointerY
       const hueShift = 24 * Math.sin(state.pulse * 0.55 + activeIndex)
 
+      const resolveColor = (base: string, hexSuffix?: string) => {
+        if (!hexSuffix) return base
+        if (base.startsWith('#')) return base + hexSuffix
+        const m = base.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+        if (m) {
+          const r = Number(m[1])
+          const g = Number(m[2])
+          const b = Number(m[3])
+          const alpha = Math.max(0, Math.min(1, parseInt(hexSuffix, 16) / 255))
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`
+        }
+        return base
+      }
+
       const bg = context.createRadialGradient(baseX, baseY, 0, state.width / 2, state.height / 2, Math.max(state.width, state.height))
-      bg.addColorStop(0, `${palette.glow}80`)
-      bg.addColorStop(0.42, `${palette.glowAlt}22`)
+      bg.addColorStop(0, resolveColor(palette.glow, '80'))
+      bg.addColorStop(0.42, resolveColor(palette.glowAlt, '22'))
       bg.addColorStop(1, 'rgba(0,0,0,0.08)')
       context.fillStyle = bg
       context.fillRect(0, 0, state.width, state.height)
