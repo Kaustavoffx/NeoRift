@@ -8,15 +8,11 @@
   "regions": ["iad1"],
   "headers": [
     {
-      "source": "/(.*)\\.(css|js|mjs|svg|png|jpg|jpeg|webp|avif|ico|json|webmanifest|woff2|br|gz)",
+      "source": "\/(.*)\\.(css|js|mjs|svg|png|jpg|jpeg|webp|avif|ico|json|webmanifest|woff2|br|gz)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "gzip"
         }
       ]
     },
